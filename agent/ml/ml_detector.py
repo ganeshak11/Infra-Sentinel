@@ -46,6 +46,15 @@ SCALER_PATH = os.getenv("ML_SCALER_PATH", str(_ML_DIR / "scaler.pkl"))
 # Cooldown: suppress duplicate alerts for N seconds after one fires
 ALERT_COOLDOWN = int(os.getenv("ML_ALERT_COOLDOWN", "60"))
 
+# Consecutive anomaly hits required before firing an alert (false positive guard)
+CONSECUTIVE_THRESHOLD = 3
+
+# Delta features: spike clamp multiplier and rolling window
+# A single tick where net_bytes_sent jumps 50x the rolling mean is a burst,
+# not an attack — clamp it before feeding to the model.
+_SPIKE_CLAMP = 10.0   # max allowed multiple of current rolling mean
+ROLLING_WINDOW = 3
+
 # Feature names — must match the order used during training
 FEATURE_NAMES = [
     "cpu_percent",
@@ -221,45 +230,86 @@ def start_ml_detector(config: dict):
     psutil.cpu_percent(interval=None)
 
     last_alert_time = 0.0
+    consecutive_anomalies = 0
+
+    # Rolling buffers for smoothing delta-based features (last ROLLING_WINDOW values)
+    _delta_keys = ["net_bytes_sent", "net_bytes_recv", "disk_io_read", "disk_io_write"]
+    _rolling: dict = {k: [] for k in _delta_keys}
+
+    def _smooth(features: dict) -> dict:
+        """Clamp extreme spikes then apply rolling average on delta features."""
+        smoothed = dict(features)
+        for key in _delta_keys:
+            raw_val = features[key]
+
+            # Spike clamp: if rolling buffer has data, cap at SPIKE_CLAMP * mean
+            if _rolling[key]:
+                rolling_mean = sum(_rolling[key]) / len(_rolling[key])
+                if rolling_mean > 0:
+                    raw_val = min(raw_val, rolling_mean * _SPIKE_CLAMP)
+
+            _rolling[key].append(raw_val)
+            if len(_rolling[key]) > ROLLING_WINDOW:
+                _rolling[key].pop(0)
+            smoothed[key] = sum(_rolling[key]) / len(_rolling[key])
+        return smoothed
 
     # ── Main scan loop ────────────────────────────────────────────────
     while True:
         try:
             # 1. Collect features
-            features = collector.collect()
+            raw_features = collector.collect()
 
-            # 2. Build feature vector in the correct order
+            # 2. Smooth delta features to reduce burst noise
+            features = _smooth(raw_features)
+
+            # 3. Build feature vector in the correct order
             feature_vector = np.array(
                 [[features[f] for f in FEATURE_NAMES]], dtype=np.float64
             )
 
-            # 3. Normalise
+            # 4. Normalise using the same scaler fitted during training
             feature_vector_scaled = scaler.transform(feature_vector)
 
-            # 4. Predict
+            # 5. Predict
             prediction = model.predict(feature_vector_scaled)[0]   # 1 or -1
             anomaly_score = model.decision_function(feature_vector_scaled)[0]
 
-            logger.debug(
-                "ML scan — prediction=%d  score=%.4f  cpu=%.1f%%  mem=%.1f%%  conns=%d",
+            # Always log scan result at INFO so every tick is visible
+            logger.info(
+                "ML scan | pred=%+d  score=%7.4f  cpu=%5.1f%%  mem=%5.1f%%  conns=%3d  "
+                "NetTx=%8.0f B  NetRx=%8.0f B",
                 prediction, anomaly_score,
                 features["cpu_percent"],
                 features["memory_percent"],
                 features["net_connections"],
+                features["net_bytes_sent"],
+                features["net_bytes_recv"],
             )
 
-            # 5. If anomaly and cooldown has elapsed → fire alert
-            # Added anomaly_score threshold to reduce false positives during active dev
-            if prediction == -1 and anomaly_score < -0.15:
+            # 6. Strict threshold: prediction == -1 AND score < -0.3
+            if prediction == -1 and anomaly_score < -0.3:
+                consecutive_anomalies += 1
+                logger.warning(
+                    "⚠️  Anomaly candidate (%d/%d) — score=%.4f",
+                    consecutive_anomalies, CONSECUTIVE_THRESHOLD, anomaly_score,
+                )
+            else:
+                # Reset counter on any normal scan
+                consecutive_anomalies = 0
+
+            # 7. Only fire alert after CONSECUTIVE_THRESHOLD hits in a row
+            if consecutive_anomalies >= CONSECUTIVE_THRESHOLD:
                 now = time.time()
                 if now - last_alert_time >= ALERT_COOLDOWN:
                     last_alert_time = now
+                    consecutive_anomalies = 0  # reset after firing
 
                     alert = _build_alert(features, anomaly_score)
 
                     logger.warning(
-                        "🚨 ML ANOMALY DETECTED — score=%.4f | %s",
-                        anomaly_score, alert["reason"],
+                        "🚨 ML ANOMALY CONFIRMED (%d consecutive) — score=%.4f | %s",
+                        CONSECUTIVE_THRESHOLD, anomaly_score, alert["reason"],
                     )
 
                     # Response action (FLAGGED in demo mode)
@@ -268,10 +318,11 @@ def start_ml_detector(config: dict):
                     # Send to backend
                     send_alert(alert, config)
                 else:
-                    logger.debug(
+                    logger.info(
                         "ML anomaly suppressed — cooldown active (%ds remaining)",
                         int(ALERT_COOLDOWN - (now - last_alert_time)),
                     )
+                    consecutive_anomalies = 0
 
         except Exception as exc:
             logger.error("ML detector scan error: %s", exc, exc_info=True)

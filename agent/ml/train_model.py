@@ -1,24 +1,22 @@
 """
 train_model.py — Trains an Isolation Forest on baseline system telemetry.
 
-This script collects N samples of "normal" system behaviour by reading live
-CPU, Memory, Network, and Disk I/O metrics via psutil.  It then fits a
-Scikit-Learn Isolation Forest and exports:
+Collects LIVE_SAMPLES real psutil samples at 0.1s interval, then augments
+to TARGET_SAMPLES (10 000) with controlled Gaussian noise so the model sees
+a rich, stable normal distribution without hours of collection time.
 
-    anomaly_model.pkl   — the trained model
-    scaler.pkl          — the StandardScaler used for feature normalisation
-
-The ml_detector.py module loads these artefacts at agent startup.
+Exports:
+    anomaly_model.pkl   — trained IsolationForest
+    scaler.pkl          — StandardScaler fitted on augmented data
 
 Usage:
-    python train_model.py                   # defaults: 200 samples, 1s apart
-    python train_model.py --samples 500     # collect 500 samples
-    python train_model.py --interval 2      # 2 seconds between samples
-    python train_model.py --contamination 0.03
+    python train_model.py                        # 2000 live → 10000 total
+    python train_model.py --live 1000            # fewer live samples
+    python train_model.py --target 5000          # smaller total dataset
+    python train_model.py --contamination 0.01
 """
 
 import os
-import sys
 import time
 import argparse
 import logging
@@ -57,6 +55,20 @@ FEATURE_NAMES = [
     "disk_io_read",
     "disk_io_write",
 ]
+
+# Relative noise fraction per feature — noise = value * fraction
+# Keeps augmented samples proportional to actual observed values.
+# A zero-byte delta stays near zero; a 10 MB delta gets ±1% = ±100 KB.
+_NOISE_FRACTION = 0.01   # 1% relative noise across all features
+_NOISE_FLOOR = {         # absolute minimum noise so zero-valued features still vary slightly
+    "cpu_percent":     0.05,
+    "memory_percent":  0.02,
+    "net_connections": 0.05,
+    "net_bytes_sent":  1.0,
+    "net_bytes_recv":  1.0,
+    "disk_io_read":    1.0,
+    "disk_io_write":   1.0,
+}
 
 
 # ── Telemetry Collector (identical logic to ml_detector.py) ──────────────────
@@ -132,22 +144,18 @@ class TelemetryCollector:
 
 # ── Data Collection ──────────────────────────────────────────────────────────
 
-def collect_baseline(num_samples: int, interval: float) -> np.ndarray:
+def collect_live(num_samples: int, interval: float) -> np.ndarray:
     """
-    Collect `num_samples` snapshots of system telemetry, sleeping `interval`
-    seconds between each.  Returns a 2-D numpy array of shape
-    (num_samples, len(FEATURE_NAMES)).
+    Collect `num_samples` real psutil snapshots at `interval` seconds apart.
+    Returns shape (num_samples, 7).
     """
     collector = TelemetryCollector()
-
-    # Prime the CPU counter — first call always returns 0.0
-    psutil.cpu_percent(interval=None)
+    psutil.cpu_percent(interval=None)   # prime — first call always 0.0
     time.sleep(interval)
 
     samples = []
-
-    logger.info("Collecting %d baseline samples (interval: %.1fs) …", num_samples, interval)
-    logger.info("Estimated time: ~%.0f seconds", num_samples * interval)
+    logger.info("Phase 1 — Live collection: %d samples @ %.2fs interval", num_samples, interval)
+    logger.info("Estimated time: ~%.0f seconds — keep system IDLE", num_samples * interval)
     logger.info("-" * 55)
 
     for i in range(1, num_samples + 1):
@@ -155,11 +163,10 @@ def collect_baseline(num_samples: int, interval: float) -> np.ndarray:
         row = [features[f] for f in FEATURE_NAMES]
         samples.append(row)
 
-        # Progress feedback every 10% or every 25 samples
         if i % max(1, num_samples // 10) == 0 or i == num_samples:
             logger.info(
-                "  [%3d/%d]  CPU: %5.1f%%  MEM: %5.1f%%  Conns: %3d  "
-                "NetTx: %8d B  NetRx: %8d B  DiskR: %8d B  DiskW: %8d B",
+                "  [%4d/%d]  CPU:%5.1f%%  MEM:%5.1f%%  Conns:%3d  "
+                "NetTx:%8.0f B  NetRx:%8.0f B  DiskR:%8.0f B  DiskW:%8.0f B",
                 i, num_samples, *row,
             )
 
@@ -167,26 +174,58 @@ def collect_baseline(num_samples: int, interval: float) -> np.ndarray:
             time.sleep(interval)
 
     logger.info("-" * 55)
-    logger.info("Collection complete — %d samples gathered.", num_samples)
-
+    logger.info("Live collection done — %d real samples.", num_samples)
     return np.array(samples, dtype=np.float64)
+
+
+def augment_to_target(live_data: np.ndarray, target: int, rng: np.random.Generator) -> np.ndarray:
+    """
+    Augment `live_data` up to `target` rows by sampling rows with replacement
+    and adding per-feature Gaussian noise scaled to _NOISE_SCALE.
+
+    Result is clipped so no feature goes below 0 (no negative bytes/CPU).
+    """
+    n_live = len(live_data)
+    n_needed = target - n_live
+    if n_needed <= 0:
+        return live_data
+
+    logger.info("Phase 2 — Augmenting %d real samples → %d total …", n_live, target)
+
+    # Sample base rows with replacement
+    idx = rng.integers(0, n_live, size=n_needed)
+    base = live_data[idx].copy()
+
+    # Relative noise: scale = max(value * 1%, floor)
+    # This ensures a 0-byte delta doesn't get ±50B absolute noise
+    floors = np.array([_NOISE_FLOOR[f] for f in FEATURE_NAMES], dtype=np.float64)
+    noise_scales = np.maximum(base * _NOISE_FRACTION, floors)   # shape (n_needed, 7)
+    noise = rng.normal(loc=0.0, scale=noise_scales)
+    augmented = np.clip(base + noise, a_min=0.0, a_max=None)
+
+    combined = np.vstack([live_data, augmented])
+    rng.shuffle(combined)   # mix live and synthetic rows
+
+    logger.info("Augmentation done — %d total samples (live: %d, synthetic: %d).",
+                len(combined), n_live, n_needed)
+    return combined
 
 
 # ── Training ─────────────────────────────────────────────────────────────────
 
 def train_and_export(
     data: np.ndarray,
-    contamination: float = 0.05,
+    contamination: float = 0.01,
     random_state: int = 42,
 ):
     """
-    1. Fit a StandardScaler on the collected data
-    2. Train an IsolationForest on the scaled data
-    3. Export both artefacts as .pkl files
-    4. Print summary statistics for verification
+    1. Fit StandardScaler on the full dataset
+    2. Train IsolationForest (200 estimators for 10k points)
+    3. Validate and log statistics
+    4. Export anomaly_model.pkl + scaler.pkl
     """
     n_samples, n_features = data.shape
-    logger.info("Training data shape: %d samples × %d features", n_samples, n_features)
+    logger.info("Phase 3 — Training on %d samples × %d features", n_samples, n_features)
 
     # ── 1. Scale ──────────────────────────────────────────────────────
     scaler = StandardScaler()
@@ -194,56 +233,52 @@ def train_and_export(
 
     logger.info("Feature statistics (raw):")
     logger.info("  %-20s %10s %10s %10s %10s", "Feature", "Mean", "Std", "Min", "Max")
-    for idx, name in enumerate(FEATURE_NAMES):
-        col = data[:, idx]
-        logger.info(
-            "  %-20s %10.2f %10.2f %10.2f %10.2f",
-            name, col.mean(), col.std(), col.min(), col.max(),
-        )
+    for i, name in enumerate(FEATURE_NAMES):
+        col = data[:, i]
+        logger.info("  %-20s %10.2f %10.2f %10.2f %10.2f",
+                    name, col.mean(), col.std(), col.min(), col.max())
 
-    # ── 2. Train Isolation Forest ─────────────────────────────────────
+    # ── 2. Train ──────────────────────────────────────────────────────
     logger.info("")
     logger.info("Training Isolation Forest …")
-    logger.info("  contamination : %.2f", contamination)
-    logger.info("  n_estimators  : 100 (default)")
+    logger.info("  contamination : %.3f", contamination)
+    logger.info("  n_estimators  : 200  (increased for 10k dataset)")
+    logger.info("  max_samples   : 512  (sub-sampling per tree for speed)")
     logger.info("  random_state  : %d", random_state)
 
     model = IsolationForest(
         contamination=contamination,
-        n_estimators=100,
-        max_samples="auto",
+        n_estimators=200,
+        max_samples=512,        # each tree sees 512 random rows — fast + diverse
         random_state=random_state,
-        n_jobs=-1,          # use all CPU cores for training
+        n_jobs=-1,
     )
     model.fit(data_scaled)
 
-    # ── 3. Validate on training data ──────────────────────────────────
+    # ── 3. Validate ───────────────────────────────────────────────────
     predictions = model.predict(data_scaled)
     scores = model.decision_function(data_scaled)
-
-    n_normal = int((predictions == 1).sum())
+    n_normal  = int((predictions ==  1).sum())
     n_anomaly = int((predictions == -1).sum())
 
     logger.info("")
     logger.info("Training validation:")
-    logger.info("  Normal samples  : %d (%.1f%%)", n_normal, 100 * n_normal / n_samples)
-    logger.info("  Anomaly samples : %d (%.1f%%)", n_anomaly, 100 * n_anomaly / n_samples)
+    logger.info("  Normal samples  : %d (%.2f%%)", n_normal,  100 * n_normal  / n_samples)
+    logger.info("  Anomaly samples : %d (%.2f%%)", n_anomaly, 100 * n_anomaly / n_samples)
     logger.info("  Score range     : [%.4f, %.4f]", scores.min(), scores.max())
     logger.info("  Score mean      : %.4f", scores.mean())
+    logger.info("  Score p5 / p95  : %.4f / %.4f",
+                np.percentile(scores, 5), np.percentile(scores, 95))
 
     # ── 4. Export ─────────────────────────────────────────────────────
     joblib.dump(model, MODEL_PATH)
     joblib.dump(scaler, SCALER_PATH)
 
-    model_size = os.path.getsize(MODEL_PATH) / 1024
-    scaler_size = os.path.getsize(SCALER_PATH) / 1024
-
     logger.info("")
     logger.info("=" * 55)
-    logger.info("✅ Model exported  → %s (%.1f KB)", MODEL_PATH, model_size)
-    logger.info("✅ Scaler exported → %s (%.1f KB)", SCALER_PATH, scaler_size)
+    logger.info("✅ Model  → %s (%.1f KB)", MODEL_PATH,  os.path.getsize(MODEL_PATH)  / 1024)
+    logger.info("✅ Scaler → %s (%.1f KB)", SCALER_PATH, os.path.getsize(SCALER_PATH) / 1024)
     logger.info("=" * 55)
-
     return model, scaler
 
 
@@ -251,26 +286,32 @@ def train_and_export(
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Train an Isolation Forest on baseline system telemetry.",
+        description="Train Isolation Forest on 10k baseline samples (live + augmented).",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "--samples", "-n",
+        "--live", "-n",
         type=int,
-        default=200,
-        help="Number of baseline telemetry samples to collect.",
+        default=2000,
+        help="Number of REAL live psutil samples to collect (rest is augmented).",
+    )
+    parser.add_argument(
+        "--target", "-t",
+        type=int,
+        default=10000,
+        help="Total training dataset size after augmentation.",
     )
     parser.add_argument(
         "--interval", "-i",
         type=float,
-        default=1.0,
-        help="Seconds between each sample collection.",
+        default=0.1,
+        help="Seconds between each live sample (0.1 = ~3.5 min for 2000 samples).",
     )
     parser.add_argument(
         "--contamination", "-c",
         type=float,
-        default=0.05,
-        help="Expected fraction of anomalies in the data (0.0 – 0.5).",
+        default=0.01,
+        help="Expected fraction of anomalies (0.01 = very strict normal boundary).",
     )
     parser.add_argument(
         "--random-state",
@@ -286,28 +327,35 @@ def parse_args():
 def main():
     args = parse_args()
 
+    rng = np.random.default_rng(args.random_state)
+
     logger.info("=" * 55)
-    logger.info("🧠  Cyber Kavach — ML Model Trainer")
+    logger.info("🧠  Cyber Kavach — ML Model Trainer (10k pipeline)")
     logger.info("=" * 55)
-    logger.info("  Samples        : %d", args.samples)
-    logger.info("  Interval       : %.1fs", args.interval)
-    logger.info("  Contamination  : %.2f", args.contamination)
-    logger.info("  Random State   : %d", args.random_state)
-    logger.info("  Output Dir     : %s", _ML_DIR)
+    logger.info("  Live samples   : %d @ %.2fs interval (~%.0fs)",
+                args.live, args.interval, args.live * args.interval)
+    logger.info("  Target total   : %d (augmented)", args.target)
+    logger.info("  Contamination  : %.3f", args.contamination)
+    logger.info("  Random state   : %d", args.random_state)
+    logger.info("  Output dir     : %s", _ML_DIR)
     logger.info("=" * 55)
+    logger.info("⚠️  Keep the system IDLE during live collection for best results.")
     logger.info("")
 
-    # Phase 1 — Collect baseline telemetry
-    data = collect_baseline(args.samples, args.interval)
+    # Phase 1 — collect real samples
+    live_data = collect_live(args.live, args.interval)
+
+    # Phase 2 — augment to target size
+    logger.info("")
+    full_data = augment_to_target(live_data, args.target, rng)
+
+    # Phase 3 — train and export
+    logger.info("")
+    train_and_export(full_data, args.contamination, args.random_state)
 
     logger.info("")
-
-    # Phase 2 — Train and export
-    train_and_export(data, args.contamination, args.random_state)
-
-    logger.info("")
-    logger.info("Done! The agent will load these files automatically on next start.")
-    logger.info("To test: ML_ENABLED=true python main.py")
+    logger.info("✅ Done! Retrain complete. Restart the agent to load the new model.")
+    logger.info("   Run: ML_ENABLED=true python main.py")
 
 
 if __name__ == "__main__":

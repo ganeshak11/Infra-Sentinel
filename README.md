@@ -127,9 +127,9 @@ Detecting a threat is step one. Understanding it is step two — and we automate
 
 ```
                     ┌─── Rule-Based Detectors ───┐
-Host Telemetry ────▶│                             │───▶ Responder ───▶ Backend API ───▶ Gen-AI Triage
-                    │   ML Anomaly Detector       │         │              │                  │
-                    └─────────────────────────────┘         ▼              ▼                  ▼
+Host Telemetry ────▶│                            │───▶ Responder ───▶ Backend API ───▶ Gen-AI Triage
+                    │   ML Anomaly Detector      │         │              │                  │
+                    └────────────────────────────┘         ▼              ▼                  ▼
                                                      Block / Kill    Email Alert     ✨ AI Analysis
                                                                     + WebSocket      on Dashboard
 ```
@@ -206,7 +206,7 @@ cd ../..
 
 ### 4. Launch
 ```bash
-docker-compose up --build
+docker-compose up --build -d
 ```
 
 ### 5. Open dashboard
