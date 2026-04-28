@@ -6,7 +6,6 @@ import {
   Marker,
   Line,
 } from 'react-simple-maps';
-import { attackMapPoints as mockPoints } from '../data/mockData';
 
 const BACKEND_URL = '';
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
@@ -84,13 +83,7 @@ export default function AttackMap() {
         const sev = a.count >= 15 ? 'CRITICAL' : a.count >= 10 ? 'HIGH' : a.count >= 5 ? 'MEDIUM' : 'LOW';
         return { ...a, coords, severity: sev };
       })
-    : [
-        { ip: '203.0.113.45', count: 4, location: 'United States', flag: '🇺🇸', coords: geoCoords['United States'], severity: 'HIGH' },
-        { ip: '198.51.100.23', count: 8, location: 'Russia', flag: '🇷🇺', coords: geoCoords['Russia'], severity: 'CRITICAL' },
-        { ip: '91.189.88.142', count: 3, location: 'Germany', flag: '🇩🇪', coords: geoCoords['Germany'], severity: 'MEDIUM' },
-        { ip: '185.220.101.1', count: 5, location: 'China', flag: '🇨🇳', coords: geoCoords['China'], severity: 'HIGH' },
-        { ip: '45.33.32.156', count: 2, location: 'Brazil', flag: '🇧🇷', coords: geoCoords['Brazil'], severity: 'MEDIUM' },
-      ];
+    : [];
 
   const renderMapContent = (isExpanded) => (
     <>

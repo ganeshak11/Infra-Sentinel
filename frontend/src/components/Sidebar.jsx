@@ -10,18 +10,16 @@ import {
   HiOutlineTerminal,
   HiOutlineStatusOnline,
   HiOutlineCog,
-  HiOutlineServer,
   HiOutlineDocumentText,
-  HiOutlineUsers,
   HiOutlineEye,
   HiOutlineFolder,
 } from 'react-icons/hi';
 
-const navSections = [
+const getNavSections = (alertCount) => [
   {
     items: [
       { icon: HiOutlineViewGrid, label: 'Dashboard' },
-      { icon: HiOutlineBell, label: 'Alerts', badge: 12 },
+      { icon: HiOutlineBell, label: 'Alerts', badge: alertCount > 0 ? alertCount : null },
       { icon: HiOutlineExclamationCircle, label: 'Incidents' },
       { icon: HiOutlineDesktopComputer, label: 'Live Monitor' },
       { icon: HiOutlineSearch, label: 'Search' },
@@ -41,15 +39,14 @@ const navSections = [
   {
     title: 'MANAGEMENT',
     items: [
-      { icon: HiOutlineServer, label: 'Servers' },
       { icon: HiOutlineDocumentText, label: 'Policies' },
-      { icon: HiOutlineUsers, label: 'Users' },
       { icon: HiOutlineCog, label: 'Settings' },
     ],
   },
 ];
 
-export default function Sidebar({ isConnected, activePage, onNavigate }) {
+export default function Sidebar({ isConnected, activePage, onNavigate, alertCount = 0 }) {
+  const navSections = getNavSections(Math.min(alertCount, 99));
   return (
     <aside className="w-[260px] h-screen bg-[#0b1120] border-r border-white/[0.06] flex flex-col fixed left-0 top-0 z-50">
       {/* Logo */}

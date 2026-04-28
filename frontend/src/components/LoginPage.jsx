@@ -48,6 +48,8 @@ function GridLines() {
 }
 
 export default function LoginPage({ onLogin }) {
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -60,27 +62,45 @@ export default function LoginPage({ onLogin }) {
     return () => clearInterval(timer);
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!email || !password) {
+    if (!email || !password || (isRegistering && !name)) {
       setError('Please fill in all fields');
       return;
     }
 
     setIsLoading(true);
 
-    // Simulate auth delay
-    setTimeout(() => {
-      // Accept any credentials for demo
-      if (email && password) {
-        onLogin({ email, name: email.split('@')[0] || 'Admin' });
-      } else {
-        setError('Invalid credentials');
+    try {
+      const endpoint = isRegistering ? '/api/register' : '/api/login';
+      // Fallback to localhost if BACKEND_URL is empty
+      const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+      
+      const payload = isRegistering 
+        ? { name, email, password } 
+        : { email, password };
+
+      const res = await fetch(`${baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.detail || 'Authentication failed');
         setIsLoading(false);
+        return;
       }
-    }, 1500);
+
+      onLogin(data);
+    } catch (err) {
+      setError('Failed to connect to backend server');
+      setIsLoading(false);
+    }
   };
 
   const stats = [
@@ -177,12 +197,35 @@ export default function LoginPage({ onLogin }) {
           <div className="bg-[#0b1120]/80 backdrop-blur-2xl border border-white/[0.06] rounded-2xl p-8 shadow-2xl shadow-black/40">
             {/* Header */}
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
-              <p className="text-sm text-kavach-muted">Sign in to access your security dashboard</p>
+              <h2 className="text-2xl font-bold text-white mb-2">{isRegistering ? 'Create Account' : 'Welcome Back'}</h2>
+              <p className="text-sm text-kavach-muted">{isRegistering ? 'Register to access the dashboard' : 'Sign in to access your security dashboard'}</p>
             </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Name (Only for Registration) */}
+              {isRegistering && (
+                <div>
+                  <label className="block text-xs font-medium text-kavach-muted mb-2 uppercase tracking-wider">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-kavach-muted">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                      </svg>
+                    </span>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="John Doe"
+                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-kavach-muted/50 focus:outline-none focus:border-cyan-500/40 focus:bg-white/[0.06] transition-all duration-300"
+                      autoComplete="name"
+                    />
+                  </div>
+                </div>
+              )}
               {/* Email */}
               <div>
                 <label className="block text-xs font-medium text-kavach-muted mb-2 uppercase tracking-wider">
@@ -281,17 +324,29 @@ export default function LoginPage({ onLogin }) {
                     <span>Authenticating...</span>
                   </div>
                 ) : (
-                  'Sign In to Dashboard'
+                  isRegistering ? 'Create Account' : 'Sign In to Dashboard'
                 )}
               </button>
             </form>
 
-            {/* Divider */}
-            <div className="flex items-center gap-4 my-6">
-              <div className="flex-1 h-px bg-white/[0.06]" />
-              <span className="text-[10px] text-kavach-muted uppercase tracking-wider">Demo Credentials</span>
-              <div className="flex-1 h-px bg-white/[0.06]" />
+            {/* Mode Toggle */}
+            <div className="mt-6 text-center">
+              <button 
+                onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+                className="text-xs text-kavach-muted hover:text-white transition-colors"
+              >
+                {isRegistering ? 'Already have an account? Sign in' : "Don't have an account? Register"}
+              </button>
             </div>
+
+            {/* Divider */}
+            {!isRegistering && (
+              <>
+                <div className="flex items-center gap-4 my-6">
+                  <div className="flex-1 h-px bg-white/[0.06]" />
+                  <span className="text-[10px] text-kavach-muted uppercase tracking-wider">Demo Credentials</span>
+                  <div className="flex-1 h-px bg-white/[0.06]" />
+                </div>
 
             {/* Quick login hint */}
             <button
@@ -306,6 +361,8 @@ export default function LoginPage({ onLogin }) {
                 <p className="text-[10px] text-kavach-muted">Click to autofill demo account</p>
               </div>
             </button>
+            </>
+            )}
           </div>
 
           {/* Footer */}

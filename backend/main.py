@@ -74,6 +74,8 @@ def _persist_alerts() -> None:
         logger.error("Failed to persist alerts: %s", exc)
 
 
+
+
 async def _broadcast(alert: dict) -> None:
     """Push the alert to every connected WebSocket client."""
     disconnected: List[WebSocket] = []
@@ -89,6 +91,8 @@ async def _broadcast(alert: dict) -> None:
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
+
 
 @app.post("/alerts")
 async def create_alert(alert: dict):
@@ -112,6 +116,47 @@ async def create_alert(alert: dict):
     await _broadcast(alert)
 
     return {"status": "ok"}
+
+
+@app.get("/threats-timeline")
+async def threats_timeline():
+    """
+    Aggregate alerts by hour for the last 24 hours.
+    Returns: [{ time: "HH:00", bruteForce, reverseShell, otherAttacks }]
+    """
+    from collections import defaultdict
+
+    # Build a bucket for each of the last 24 hours
+    now = datetime.now(timezone.utc)
+    buckets = {}
+    for h in range(24):
+        hour_dt = now.replace(minute=0, second=0, microsecond=0)
+        hour_dt = hour_dt.replace(hour=(now.hour - h) % 24)
+        label = hour_dt.strftime("%H:00")
+        buckets[label] = {"time": label, "bruteForce": 0, "reverseShell": 0, "otherAttacks": 0}
+
+    for alert in alerts:
+        try:
+            ts = datetime.fromisoformat(alert.get("timestamp", "").replace("Z", "+00:00"))
+            # Only include alerts from the last 24h
+            if (now - ts).total_seconds() > 86400:
+                continue
+            label = ts.strftime("%H:00")
+            if label not in buckets:
+                continue
+            atype = alert.get("type", "")
+            if atype == "brute_force":
+                buckets[label]["bruteForce"] += 1
+            elif atype == "reverse_shell":
+                buckets[label]["reverseShell"] += 1
+            else:
+                buckets[label]["otherAttacks"] += 1
+        except Exception:
+            continue
+
+    # Return oldest → newest
+    result = sorted(buckets.values(), key=lambda x: x["time"])
+    return result
 
 
 @app.get("/alerts")

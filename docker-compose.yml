@@ -10,6 +10,7 @@ services:
       - .env
     volumes:
       - ./backend/alerts.json:/app/alerts.json
+      - ./backend/users.json:/app/users.json
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]

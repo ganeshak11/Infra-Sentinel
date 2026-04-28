@@ -26,9 +26,9 @@ export default function AlertsPage({ alerts }) {
   const filteredAlerts = alerts.filter((alert) => {
     const matchesSeverity = filter === 'ALL' || alert.severity === filter;
     const matchesSearch = !searchQuery ||
-      alert.label?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      alert.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       alert.ip?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      alert.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      alert.reason?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSeverity && matchesSearch;
   });
 
@@ -72,8 +72,8 @@ export default function AlertsPage({ alerts }) {
                 <tr key={alert.id || idx} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
                   <td className="px-5 py-3.5 text-lg">{alertTypeIcons[alert.type] || '⚠️'}</td>
                   <td className="px-5 py-3.5">
-                    <p className="text-sm font-semibold text-white">{alert.label}</p>
-                    <p className="text-xs text-kavach-muted mt-0.5 max-w-[280px] truncate">{alert.description}</p>
+                    <p className="text-sm font-semibold text-white capitalize">{alert.type ? alert.type.replace(/_/g, ' ') : 'Unknown Alert'}</p>
+                    <p className="text-xs text-kavach-muted mt-0.5 max-w-[280px] truncate">{alert.reason || '—'}</p>
                   </td>
                   <td className="px-5 py-3.5"><span className="inline-flex items-center px-2.5 py-1 rounded-md bg-red-500/10 text-red-400 text-xs font-mono font-medium">{alert.ip}</span></td>
                   <td className="px-5 py-3.5"><SeverityBadge severity={alert.severity} /></td>

@@ -9,7 +9,6 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { threatTimelineData as mockTimelineData } from '../data/mockData';
 
 const BACKEND_URL = '';
 
@@ -30,7 +29,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function ThreatsChart() {
-  const [timelineData, setTimelineData] = useState(mockTimelineData);
+  const [timelineData, setTimelineData] = useState([]);
 
   useEffect(() => {
     fetch(`${BACKEND_URL}/api/threats-timeline`)

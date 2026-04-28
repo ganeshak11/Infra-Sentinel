@@ -249,7 +249,8 @@ def start_ml_detector(config: dict):
             )
 
             # 5. If anomaly and cooldown has elapsed → fire alert
-            if prediction == -1:
+            # Added anomaly_score threshold to reduce false positives during active dev
+            if prediction == -1 and anomaly_score < -0.15:
                 now = time.time()
                 if now - last_alert_time >= ALERT_COOLDOWN:
                     last_alert_time = now

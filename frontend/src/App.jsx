@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import LoginPage from './components/LoginPage';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import StatCards from './components/StatCards';
@@ -13,10 +12,8 @@ import LiveMonitorPage from './components/LiveMonitorPage';
 import SearchPage from './components/SearchPage';
 import ThreatIntelPage from './components/ThreatIntelPage';
 import ProtectionPage from './components/ProtectionPage';
-import ServersPage from './components/ServersPage';
 import SettingsPage from './components/SettingsPage';
 import PoliciesPage from './components/PoliciesPage';
-import UsersPage from './components/UsersPage';
 import { useWebSocket } from './hooks/useWebSocket';
 
 // Protection page configs
@@ -79,32 +76,8 @@ const protectionConfigs = {
 };
 
 export default function App() {
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem('kavach_user');
-      return saved && saved !== 'undefined' ? JSON.parse(saved) : null;
-    } catch (e) {
-      sessionStorage.removeItem('kavach_user');
-      return null;
-    }
-  });
-
-  const handleLogin = (userData) => {
-    setUser(userData);
-    sessionStorage.setItem('kavach_user', JSON.stringify(userData));
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    sessionStorage.removeItem('kavach_user');
-  };
-
-  // Show login page if not authenticated
-  if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
-
-  return <DashboardApp user={user} onLogout={handleLogout} />;
+  const user = { name: "Admin", email: "admin@localhost" };
+  return <DashboardApp user={user} onLogout={() => {}} />;
 }
 
 function DashboardApp({ user, onLogout }) {
@@ -143,7 +116,7 @@ function DashboardApp({ user, onLogout }) {
                 ))}
               </div>
             </div>
-            <StatCards counters={counters} />
+            <StatCards counters={counters} alerts={alerts} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
               <ThreatsChart />
               <AttackMap />
@@ -164,14 +137,12 @@ function DashboardApp({ user, onLogout }) {
         return <SearchPage alerts={alerts} />;
       case 'Threat Intelligence':
         return <ThreatIntelPage alerts={alerts} />;
-      case 'Servers':
-        return <ServersPage />;
       case 'Settings':
         return <SettingsPage />;
       case 'Policies':
         return <PoliciesPage />;
       case 'Users':
-        return <UsersPage />;
+        return <div className="glass-card p-12 text-center"><p className="text-kavach-muted">Users section removed.</p></div>;
       default:
         return <div className="glass-card p-12 text-center"><p className="text-kavach-muted">Page not found.</p></div>;
     }
@@ -179,7 +150,7 @@ function DashboardApp({ user, onLogout }) {
 
   return (
     <div className="flex min-h-screen bg-[#0a0e17]">
-      <Sidebar isConnected={isConnected} activePage={activePage} onNavigate={setActivePage} />
+      <Sidebar isConnected={isConnected} activePage={activePage} onNavigate={setActivePage} alertCount={alerts.length} />
       <main className="ml-[260px] flex-1 p-6 overflow-y-auto">
         {renderPage()}
       </main>
