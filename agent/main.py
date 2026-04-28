@@ -19,6 +19,7 @@ from detectors.network_monitor import start_network_monitor
 from detectors.honeypot import start_honeypot_detector
 from detectors.cryptominer import start_cryptominer_detector
 from detectors.privesc import start_privesc_detector
+from ml.ml_detector import start_ml_detector
 
 # ── Load .env if present ─────────────────────────────────────────────
 load_dotenv()
@@ -80,6 +81,7 @@ def main():
         ("HoneypotDetector", start_honeypot_detector, config),
         ("CryptominerKiller", start_cryptominer_detector, config),
         ("PrivilegeEscalation", start_privesc_detector, config),
+        ("MLAnomalyDetector", start_ml_detector, config),
     ]
 
     threads = []

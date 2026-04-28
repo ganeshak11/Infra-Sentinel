@@ -79,8 +79,9 @@ This document tracks the overall building progress of the Cyber Kavach project, 
 **Owner:** ML Specialist  
 =======
 **Owner:** Keerthi  
+**Status:** ✅ **FINISHED**
 >>>>>>> 9df8c8ca5145b99abe03afae7cff9f60f138c24e
 **Status:** ⏳ **IN PROGRESS**
 
-- [ ] Write `agent/ml/train_model.py` (Train `IsolationForest` on CPU/Mem bounds and dump to `anomaly_model.pkl`)
-- [ ] Build `agent/detectors/ai_monitor.py` (Load model, scan `psutil` streams, emit `-1` anomaly to `send_alert()`)
+- [x] Write `agent/ml/train_model.py` (Train `IsolationForest` on CPU/Mem bounds and dump to `anomaly_model.pkl`)
+- [x] Build `agent/detectors/ml_detector.py` (Load model, scan `psutil` streams, emit `-1` anomaly to `send_alert()`)

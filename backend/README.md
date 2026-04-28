@@ -1,6 +1,6 @@
 # ⚙️ Backend — API, Alerts & Notifications
 
-**Owner:** Chinmay  
+**Owner:** Nithish  
 **Stack:** Python 3.11 + FastAPI + Uvicorn  
 **Port:** `8000`
 

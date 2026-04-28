@@ -33,6 +33,8 @@ def respond(alert, config):
         _handle_ip_block(alert, demo)
     elif alert_type in ("reverse_shell", "cryptominer"):
         _handle_process_kill(alert, demo)
+    elif alert_type == "ml_anomaly":
+        _handle_ml_flag(alert, demo)
     else:
         logger.warning("Unknown alert type '%s' — no action taken.", alert_type)
         alert["action"] = "NONE"
@@ -72,6 +74,34 @@ def _handle_ip_block(alert, demo):
         except FileNotFoundError:
             logger.error("iptables not found — cannot block IP %s.", ip)
             alert["action"] = "BLOCK_FAILED"
+
+
+# ── ML Anomaly Flagging ──────────────────────────────────────────────
+
+def _handle_ml_flag(alert, demo):
+    """
+    Flag an ML-detected behavioral anomaly.
+
+    ML anomalies are system-wide deviations — there is no single IP to block
+    or process to kill.  The alert is flagged so the Gen-AI Copilot (Layer 2)
+    can perform automated triage.
+
+    Args:
+        alert: dict with ml_metadata
+        demo:  bool — if True, prefix action with SIMULATED_
+    """
+    if demo:
+        logger.info(
+            "[DEMO] ML anomaly flagged for triage — score: %s",
+            alert.get("ml_metadata", {}).get("anomaly_score", "N/A"),
+        )
+        alert["action"] = "SIMULATED_FLAG"
+    else:
+        logger.warning(
+            "🧠 ML anomaly flagged for triage — score: %s",
+            alert.get("ml_metadata", {}).get("anomaly_score", "N/A"),
+        )
+        alert["action"] = "FLAGGED"
 
 
 # ── Process Killing ──────────────────────────────────────────────────
