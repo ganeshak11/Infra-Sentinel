@@ -64,7 +64,7 @@ This document tracks the overall building progress of the Cyber Kavach project, 
 
 ## 🧠 Agent Machine Learning (Phase 8)
 **Owner:** Keerthi  
-**Status:** ⏳ **IN PROGRESS**
+**Status:** ✅ **FINISHED**
 
-- [ ] Write `agent/ml/train_model.py` (Train `IsolationForest` on CPU/Mem bounds and dump to `anomaly_model.pkl`)
-- [ ] Build `agent/detectors/ai_monitor.py` (Load model, scan `psutil` streams, emit `-1` anomaly to `send_alert()`)
+- [x] Write `agent/ml/train_model.py` (Train `IsolationForest` on CPU/Mem bounds and dump to `anomaly_model.pkl`)
+- [x] Build `agent/detectors/ml_detector.py` (Load model, scan `psutil` streams, emit `-1` anomaly to `send_alert()`)
