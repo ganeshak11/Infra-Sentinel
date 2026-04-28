@@ -29,51 +29,20 @@ SUSPICIOUS_NAMES = {"bash", "sh", "nc", "ncat", "netcat", "python", "python3", "
 # Standard ports that are considered safe — connections to these are ignored
 STANDARD_PORTS = {22, 80, 443}
 
-# TCP state "01" in /proc/net/tcp means ESTABLISHED
-TCP_STATE_ESTABLISHED = "01"
-
 SCAN_INTERVAL = 5  # seconds
 
-
-def _hex_to_ip_port(hex_str):
+def _get_proc_tcp_connections(proc):
     """
-    Convert a hex-encoded IP:port pair from /proc/net/tcp to human-readable form.
-    Example: "0100007F:0050" → ("127.0.0.1", 80)
-    """
-    ip_hex, port_hex = hex_str.split(":")
-    # IP is stored in little-endian order
-    ip_int = struct.unpack("<I", bytes.fromhex(ip_hex))[0]
-    ip = socket.inet_ntoa(struct.pack(">I", ip_int))
-    port = int(port_hex, 16)
-    return ip, port
-
-
-def _get_proc_tcp_connections(pid):
-    """
-    Read /proc/<pid>/net/tcp to get TCP connections for a specific process.
+    Use psutil to get TCP connections owned by this specific process.
     Returns a list of (remote_ip, remote_port, state) tuples.
     """
     connections = []
-    tcp_path = f"/proc/{pid}/net/tcp"
-
     try:
-        with open(tcp_path, "r") as f:
-            # Skip header line
-            lines = f.readlines()[1:]
-            for line in lines:
-                parts = line.strip().split()
-                if len(parts) < 4:
-                    continue
-
-                remote_addr = parts[2]       # rem_address column
-                state = parts[3]             # st (state) column
-
-                remote_ip, remote_port = _hex_to_ip_port(remote_addr)
-                connections.append((remote_ip, remote_port, state))
-    except (FileNotFoundError, PermissionError):
-        # Process may have exited or we lack permissions
+        for conn in proc.connections(kind="tcp"):
+            if conn.raddr:
+                connections.append((conn.raddr.ip, conn.raddr.port, conn.status))
+    except (psutil.AccessDenied, psutil.ZombieProcess):
         pass
-
     return connections
 
 
@@ -85,7 +54,7 @@ def _is_suspicious_connection(remote_ip, remote_port, state):
     3. It is not a loopback connection
     4. It is not a Docker bridge (172.16-31.x.x)
     """
-    if state != TCP_STATE_ESTABLISHED:
+    if state != "ESTABLISHED":
         return False
     if remote_port in STANDARD_PORTS:
         return False
@@ -172,8 +141,8 @@ def start_reverse_shell_detector(config):
                     if pid in alerted_pids:
                         continue
 
-                    # Check its TCP connections via /proc
-                    connections = _get_proc_tcp_connections(pid)
+                    # Check its TCP connections
+                    connections = _get_proc_tcp_connections(proc)
 
                     for remote_ip, remote_port, state in connections:
                         if _is_suspicious_connection(remote_ip, remote_port, state):

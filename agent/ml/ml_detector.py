@@ -27,7 +27,7 @@ try:
     import joblib
 except ImportError:
     # Fallback — joblib is re-exported by sklearn as well
-from sklearn.externals import joblib  # type: ignore[attr-defined]
+    from sklearn.externals import joblib  # type: ignore[attr-defined]
 
 from responder import respond
 from sender import send_alert

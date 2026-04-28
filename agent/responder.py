@@ -31,7 +31,11 @@ def respond(alert, config):
 
     if alert_type in ("brute_force", "network_anomaly", "deception_alert"):
         _handle_ip_block(alert, demo)
-    elif alert_type in ("reverse_shell", "cryptominer"):
+    elif alert_type == "reverse_shell":
+        _handle_process_kill(alert, demo)
+        _handle_ip_block(alert, demo)
+        alert["action"] = "KILLED_AND_BLOCKED"
+    elif alert_type == "cryptominer":
         _handle_process_kill(alert, demo)
     elif alert_type == "ml_anomaly":
         _handle_ml_flag(alert, demo)

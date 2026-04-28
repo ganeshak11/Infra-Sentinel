@@ -46,8 +46,13 @@ services:
     volumes:
       # Mount host logs for real monitoring
       - /var/log:/var/log:ro
+      # Mount host identity files for PrivEsc monitoring
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/shadow:/etc/shadow:ro
       # Mount blacklist live — changes take effect within 10s (no rebuild needed)
       - ./agent/blacklist.txt:/app/blacklist.txt:ro
+      # Mount ML directory so trained models persist across rebuilds
+      - ./agent/ml:/app/ml
     depends_on:
       - backend
     restart: unless-stopped

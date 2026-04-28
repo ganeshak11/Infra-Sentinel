@@ -41,7 +41,7 @@ BLACKLIST_PATH = os.path.abspath(
 
 # ── Private IPs to ignore (loopback, RFC-1918, link-local, Docker) ────────────
 _PRIVATE_RE = re.compile(
-    r"^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|0\.0\.0\.0)"
+    r"^(127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|0\.0\.0\.0)"
 )
 
 
