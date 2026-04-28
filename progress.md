@@ -20,31 +20,31 @@ This document tracks the overall building progress of the Cyber Kavach project, 
 
 ## ⚙️ Backend — API, Alerts & Notifications
 **Owner:** Chinmay  
-**Status:** ⏳ **IN PROGRESS**
+**Status:** ✅ **FINISHED**
 
-- [ ] Initialize FastAPI app with `main.py`
-- [ ] Implement `POST /alerts` endpoint (Store JSON, trigger Email/WS)
-- [ ] Implement `GET /alerts` endpoint to retrieve history
-- [ ] Implement WebSocket `ws://.../ws` for live dashboard data
-- [ ] Implement `GET /health` heartbeat ping
-- [ ] Build `email_notifier.py` logic (SMTP to `ALERT_EMAIL`)
-- [ ] Setup persistent `alerts.json` storage
-- [ ] Add CORS Middleware
+- [x] Initialize FastAPI app with `main.py`
+- [x] Implement `POST /alerts` endpoint (Store JSON, trigger Email/WS)
+- [x] Implement `GET /alerts` endpoint to retrieve history
+- [x] Implement WebSocket `ws://.../ws` for live dashboard data
+- [x] Implement `GET /health` heartbeat ping
+- [x] Build `email_notifier.py` logic (SMTP to `ALERT_EMAIL`)
+- [x] Setup persistent `alerts.json` storage
+- [x] Add CORS Middleware
 
 ---
 
 ## 📊 Frontend — Live Security Dashboard
 **Owner:** Harish Patel  
-**Status:** ⏳ **IN PROGRESS**
+**Status:** ✅ **FINISHED**
 
-- [ ] Setup `index.html` structure (Header, 4 Stat Cards, Alert Table, Timeline)
-- [ ] Write `style.css` (Dark mode `#0d1117`, glassmorphism, cyan/green accents)
-- [ ] Configure `nginx.conf` to serve static assets
-- [ ] Implement `app.js` Logic:
-  - [ ] Connect WebSocket to pull live alerts
-  - [ ] Poll existing alerts via REST on initial load
-  - [ ] Implement heartbeat ping to show Agent 🟢/🔴 status
-  - [ ] Update timeline UI and badge color codings (`HIGH`/`MEDIUM`/`LOW`)
+- [x] Setup `index.html` structure (Header, 4 Stat Cards, Alert Table, Timeline)
+- [x] Write `style.css` (Dark mode `#0d1117`, glassmorphism, cyan/green accents)
+- [x] Configure `nginx.conf` to serve static assets
+- [x] Implement `app.js` Logic:
+  - [x] Connect WebSocket to pull live alerts
+  - [x] Poll existing alerts via REST on initial load
+  - [x] Implement heartbeat ping to show Agent 🟢/🔴 status
+  - [x] Update timeline UI and badge color codings (`HIGH`/`MEDIUM`/`LOW`)
 
 ---
 

@@ -119,7 +119,7 @@ export default function AttackMap() {
       {markers.map((m, i) => {
         const s = sevStyle[m.severity] || sevStyle.LOW;
         return <Line key={`l-${i}`} from={m.coords} to={SERVER_COORDS} stroke={s.stroke}
-          strokeWidth={isExpanded ? 1.5 : 1} strokeLinecap="round" strokeDasharray="4 3" strokeOpacity={0.5} curve />;
+          strokeWidth={isExpanded ? 1.5 : 1} strokeLinecap="round" strokeDasharray="4 3" strokeOpacity={0.5} curve="true" />;
       })}
       <Marker coordinates={SERVER_COORDS}>
         <circle r={isExpanded ? 10 : 8} fill="rgba(59,130,246,0.15)" stroke="#3b82f6" strokeWidth={1} />
