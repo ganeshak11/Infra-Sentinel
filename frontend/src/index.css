@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Global Styles ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0a0e17;
+  color: #e6edf3;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ===== Custom Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0e17;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* ===== Glassmorphism Card ===== */
+@layer components {
+  .glass-card {
+    @apply bg-[#0f1629]/80 backdrop-blur-xl border border-white/[0.06] rounded-xl;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03),
+                0 4px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300;
+  }
+
+  .glass-card-hover:hover {
+    @apply border-white/[0.12];
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06),
+                0 8px 32px rgba(0, 0, 0, 0.5);
+    transform: translateY(-1px);
+  }
+
+  .severity-badge {
+    @apply px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-kavach-muted hover:text-kavach-text hover:bg-white/[0.05];
+  }
+
+  .sidebar-link.active {
+    @apply text-kavach-accent bg-kavach-accent/10;
+  }
+
+  .stat-card-icon {
+    @apply w-10 h-10 rounded-xl flex items-center justify-center text-lg;
+  }
+}
+
+/* ===== Alert Row Flash ===== */
+@keyframes flashIn {
+  0% {
+    background-color: rgba(0, 212, 255, 0.12);
+    transform: translateX(-4px);
+  }
+  100% {
+    background-color: transparent;
+    transform: translateX(0);
+  }
+}
+
+.alert-flash {
+  animation: flashIn 0.7s ease-out;
+}
+
+/* ===== Pulse Dot ===== */
+@keyframes pulseDot {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+}
+
+.attack-dot {
+  animation: pulseDot 2s ease-in-out infinite;
+}
+
+/* ===== Gradient Text ===== */
+.gradient-text {
+  background: linear-gradient(135deg, #00d4ff, #00ff88);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== Login Page Floating Particles ===== */
+@keyframes float {
+  0% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-30px) translateX(15px);
+    opacity: 0.1;
+  }
+}

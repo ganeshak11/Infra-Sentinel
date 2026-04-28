@@ -50,6 +50,7 @@ This document tracks the overall building progress of the Cyber Kavach project, 
 
 ## 🤖 Agent — Detection & Response Core
 **Owner:** Keerthi  
+<<<<<<< HEAD
 **Status:** ⏳ **IN PROGRESS**
 
 - [ ] Setup `main.py` entrypoint (start loops, send heartbeats)
@@ -59,11 +60,26 @@ This document tracks the overall building progress of the Cyber Kavach project, 
   - [ ] `detectors/brute_force.py` (Watch `/var/log/auth.log` for limit triggers)
   - [ ] `detectors/reverse_shell.py` (Scan `ps aux` and active connections)
   - [ ] `detectors/network_monitor.py` (Compare `ss -tnp` vs `blacklist.txt`)
+=======
+**Status:** ✅ **FINISHED**
+
+- [x] Setup `main.py` entrypoint (start loops, send heartbeats)
+- [x] Implement `sender.py` to POST alerts to backend
+- [x] Implement `responder.py` logic (demo mode block/kill vs real block/kill)
+- [x] Build Detectors:
+  - [x] `detectors/brute_force.py` (Watch `/var/log/auth.log` for limit triggers)
+  - [x] `detectors/reverse_shell.py` (Scan `ps aux` and active connections)
+  - [x] `detectors/network_monitor.py` (Compare `ss -tnp` vs `blacklist.txt`)
+>>>>>>> 9df8c8ca5145b99abe03afae7cff9f60f138c24e
 
 ---
 
 ## 🧠 Agent Machine Learning (Phase 8)
+<<<<<<< HEAD
 **Owner:** ML Specialist  
+=======
+**Owner:** Keerthi  
+>>>>>>> 9df8c8ca5145b99abe03afae7cff9f60f138c24e
 **Status:** ⏳ **IN PROGRESS**
 
 - [ ] Write `agent/ml/train_model.py` (Train `IsolationForest` on CPU/Mem bounds and dump to `anomaly_model.pkl`)

@@ -1,6 +1,6 @@
 # 📊 Frontend — Live Security Dashboard
 
-**Owner:** Harish Patel
+**Owner:** Chinmay
 **Stack:** HTML + CSS + Vanilla JavaScript (no frameworks)  
 **Port:** `3000` (served via nginx)
 
