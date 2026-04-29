@@ -127,14 +127,21 @@ clone_repo() {
     
     if [ -d "$INSTALL_DIR" ]; then
         log_warning "Directory $INSTALL_DIR already exists"
-        read -p "$(echo -e ${YELLOW}Do you want to remove it and reinstall? [y/N]: ${NC})" -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Removing existing installation..."
-            rm -rf "$INSTALL_DIR"
+        if [ -t 0 ]; then
+            read -p "$(echo -e ${YELLOW}Do you want to remove it and reinstall? [y/N]: ${NC})" -n 1 -r
+            echo ""
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                log_info "Removing existing installation..."
+                rm -rf "$INSTALL_DIR"
+            else
+                log_error "Installation cancelled"
+                exit 1
+            fi
         else
-            log_error "Installation cancelled"
-            exit 1
+            log_info "Non-interactive mode: Using existing directory"
+            cd "$INSTALL_DIR"
+            git pull origin "$BRANCH" || true
+            return
         fi
     fi
     

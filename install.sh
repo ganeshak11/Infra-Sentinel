@@ -22,21 +22,21 @@ print_banner() {
     cat << "EOF"
     ╔═══════════════════════════════════════════════════════════════╗
     ║                                                               ║
-    ║   ██████╗██╗   ██╗██████╗ ███████╗██████╗                   ║
-    ║  ██╔════╝╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗                  ║
-    ║  ██║      ╚████╔╝ ██████╔╝█████╗  ██████╔╝                  ║
-    ║  ██║       ╚██╔╝  ██╔══██╗██╔══╝  ██╔══██╗                  ║
-    ║  ╚██████╗   ██║   ██████╔╝███████╗██║  ██║                  ║
-    ║   ╚═════╝   ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝                  ║
+    ║   ██████╗██╗   ██╗██████╗ ███████╗██████╗                     ║
+    ║  ██╔════╝╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗                    ║
+    ║  ██║      ╚████╔╝ ██████╔╝█████╗  ██████╔╝                    ║
+    ║  ██║       ╚██╔╝  ██╔══██╗██╔══╝  ██╔══██╗                    ║
+    ║  ╚██████╗   ██║   ██████╔╝███████╗██║  ██║                    ║
+    ║   ╚═════╝   ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝                    ║
     ║                                                               ║
-    ║   ██╗  ██╗ █████╗ ██╗   ██╗ █████╗  ██████╗██╗  ██╗        ║
-    ║   ██║ ██╔╝██╔══██╗██║   ██║██╔══██╗██╔════╝██║  ██║        ║
-    ║   █████╔╝ ███████║██║   ██║███████║██║     ███████║        ║
-    ║   ██╔═██╗ ██╔══██║╚██╗ ██╔╝██╔══██║██║     ██╔══██║        ║
-    ║   ██║  ██╗██║  ██║ ╚████╔╝ ██║  ██║╚██████╗██║  ██║        ║
-    ║   ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝        ║
+    ║   ██╗  ██╗ █████╗ ██╗   ██╗ █████╗  ██████╗██╗  ██╗           ║
+    ║   ██║ ██╔╝██╔══██╗██║   ██║██╔══██╗██╔════╝██║  ██║           ║
+    ║   █████╔╝ ███████║██║   ██║███████║██║     ███████║           ║
+    ║   ██╔═██╗ ██╔══██║╚██╗ ██╔╝██╔══██║██║     ██╔══██║           ║
+    ║   ██║  ██╗██║  ██║ ╚████╔╝ ██║  ██║╚██████╗██║  ██║           ║
+    ║   ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝           ║
     ║                                                               ║
-    ║        AI-Powered Real-Time Threat Detection Platform        ║
+    ║        AI-Powered Real-Time Threat Detection Platform         ║
     ║                                                               ║
     ╚═══════════════════════════════════════════════════════════════╝
 EOF
@@ -143,12 +143,16 @@ check_ports() {
     
     if [ ${#ports_in_use[@]} -ne 0 ]; then
         log_warning "Ports already in use: ${ports_in_use[*]}"
-        echo ""
-        read -p "$(echo -e ${YELLOW}Do you want to continue anyway? [y/N]: ${NC})" -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_error "Installation cancelled"
-            exit 1
+        if [ -t 0 ]; then
+            echo ""
+            read -p "$(echo -e ${YELLOW}Do you want to continue anyway? [y/N]: ${NC})" -n 1 -r
+            echo ""
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                log_error "Installation cancelled"
+                exit 1
+            fi
+        else
+            log_warning "Non-interactive mode: Continuing anyway"
         fi
     else
         log_success "Ports 3000 and 8000 are available"
@@ -161,10 +165,15 @@ configure_env() {
     
     if [ -f .env ]; then
         log_warning ".env file already exists"
-        read -p "$(echo -e ${YELLOW}Do you want to reconfigure? [y/N]: ${NC})" -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Using existing .env file"
+        if [ -t 0 ]; then
+            read -p "$(echo -e ${YELLOW}Do you want to reconfigure? [y/N]: ${NC})" -n 1 -r
+            echo ""
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                log_info "Using existing .env file"
+                return
+            fi
+        else
+            log_info "Non-interactive mode: Using existing .env file"
             return
         fi
     fi
@@ -172,6 +181,14 @@ configure_env() {
     # Copy template
     cp .env.example .env
     log_success "Created .env from template"
+    
+    # Check if running in interactive mode
+    if [ ! -t 0 ]; then
+        log_warning "Non-interactive mode detected"
+        log_info "Using default configuration - edit .env file to customize"
+        log_info "Configuration file: $(pwd)/.env"
+        return
+    fi
     
     echo ""
     echo -e "${BOLD}${CYAN}═══════════════════════════════════════════════════════════${NC}"
@@ -182,17 +199,26 @@ configure_env() {
     # Email Configuration
     echo -e "${BOLD}📧 Email Alert Configuration${NC}"
     echo -e "${YELLOW}(For Gmail: Use App Password from https://myaccount.google.com/apppasswords)${NC}"
+    echo -e "${YELLOW}(Press Enter to skip and configure later in .env file)${NC}"
     echo ""
     
-    read -p "SMTP User (your Gmail): " smtp_user
-    read -sp "SMTP Password (App Password): " smtp_pass
-    echo ""
-    read -p "Alert Recipient Email: " alert_email
-    echo ""
+    read -p "SMTP User (your Gmail): " smtp_user || smtp_user=""
+    if [ -z "$smtp_user" ]; then
+        log_warning "Skipping email configuration - configure manually in .env"
+        smtp_user="your_email@gmail.com"
+        smtp_pass="xxxx xxxx xxxx xxxx"
+        alert_email="recipient@gmail.com"
+    else
+        read -sp "SMTP Password (App Password): " smtp_pass || smtp_pass=""
+        echo ""
+        read -p "Alert Recipient Email: " alert_email || alert_email=""
+        echo ""
+    fi
     
     # AI Configuration
+    echo ""
     echo -e "${BOLD}🤖 AI Copilot Configuration${NC}"
-    echo -e "${YELLOW}(Optional: Leave blank to skip AI-powered threat analysis)${NC}"
+    echo -e "${YELLOW}(Optional: Press Enter to skip AI-powered threat analysis)${NC}"
     echo ""
     echo "Supported providers:"
     echo "  1) Gemini (Google)"
@@ -201,7 +227,8 @@ configure_env() {
     echo "  4) Groq"
     echo "  5) Skip AI features"
     echo ""
-    read -p "Select provider [1-5]: " llm_choice
+    read -p "Select provider [1-5] (default: 5): " llm_choice || llm_choice="5"
+    llm_choice=${llm_choice:-5}
     
     llm_provider=""
     api_key=""
@@ -209,23 +236,31 @@ configure_env() {
     case $llm_choice in
         1)
             llm_provider="gemini"
-            read -p "Gemini API Key: " api_key
-            sed -i "s/GEMINI_API_KEY=.*/GEMINI_API_KEY=$api_key/" .env
+            read -p "Gemini API Key: " api_key || api_key=""
+            if [ -n "$api_key" ]; then
+                sed -i "s/GEMINI_API_KEY=.*/GEMINI_API_KEY=$api_key/" .env
+            fi
             ;;
         2)
             llm_provider="openai"
-            read -p "OpenAI API Key: " api_key
-            sed -i "s/# OPENAI_API_KEY=.*/OPENAI_API_KEY=$api_key/" .env
+            read -p "OpenAI API Key: " api_key || api_key=""
+            if [ -n "$api_key" ]; then
+                sed -i "s/# OPENAI_API_KEY=.*/OPENAI_API_KEY=$api_key/" .env
+            fi
             ;;
         3)
             llm_provider="anthropic"
-            read -p "Anthropic API Key: " api_key
-            sed -i "s/# ANTHROPIC_API_KEY=.*/ANTHROPIC_API_KEY=$api_key/" .env
+            read -p "Anthropic API Key: " api_key || api_key=""
+            if [ -n "$api_key" ]; then
+                sed -i "s/# ANTHROPIC_API_KEY=.*/ANTHROPIC_API_KEY=$api_key/" .env
+            fi
             ;;
         4)
             llm_provider="groq"
-            read -p "Groq API Key: " api_key
-            sed -i "s/# GROQ_API_KEY=.*/GROQ_API_KEY=$api_key/" .env
+            read -p "Groq API Key: " api_key || api_key=""
+            if [ -n "$api_key" ]; then
+                sed -i "s/# GROQ_API_KEY=.*/GROQ_API_KEY=$api_key/" .env
+            fi
             ;;
         5)
             log_info "Skipping AI features"
@@ -238,13 +273,19 @@ configure_env() {
     esac
     
     # Update .env file
-    if [ "$llm_provider" != "none" ]; then
+    if [ "$llm_provider" != "none" ] && [ -n "$llm_provider" ]; then
         sed -i "s/LLM_PROVIDER=.*/LLM_PROVIDER=$llm_provider/" .env
     fi
     
-    sed -i "s/SMTP_USER=.*/SMTP_USER=$smtp_user/" .env
-    sed -i "s/SMTP_PASS=.*/SMTP_PASS=$smtp_pass/" .env
-    sed -i "s/ALERT_EMAIL=.*/ALERT_EMAIL=$alert_email/" .env
+    if [ -n "$smtp_user" ]; then
+        sed -i "s/SMTP_USER=.*/SMTP_USER=$smtp_user/" .env
+    fi
+    if [ -n "$smtp_pass" ]; then
+        sed -i "s/SMTP_PASS=.*/SMTP_PASS=$smtp_pass/" .env
+    fi
+    if [ -n "$alert_email" ]; then
+        sed -i "s/ALERT_EMAIL=.*/ALERT_EMAIL=$alert_email/" .env
+    fi
     
     log_success "Environment configured successfully"
 }
@@ -255,10 +296,15 @@ train_ml_model() {
     
     if [ -f agent/ml/anomaly_model.pkl ] && [ -f agent/ml/scaler.pkl ]; then
         log_warning "ML model already exists"
-        read -p "$(echo -e ${YELLOW}Do you want to retrain? [y/N]: ${NC})" -n 1 -r
-        echo ""
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Using existing ML model"
+        if [ -t 0 ]; then
+            read -p "$(echo -e ${YELLOW}Do you want to retrain? [y/N]: ${NC})" -n 1 -r
+            echo ""
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                log_info "Using existing ML model"
+                return
+            fi
+        else
+            log_info "Non-interactive mode: Using existing ML model"
             return
         fi
     fi
