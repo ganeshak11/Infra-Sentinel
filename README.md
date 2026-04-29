@@ -1,5 +1,7 @@
 # 🛡️ Cyber Kavach
 
+[![Installation Test](https://github.com/ganeshak11/Infra-Sentinel/actions/workflows/test-installation.yml/badge.svg)](https://github.com/ganeshak11/Infra-Sentinel/actions/workflows/test-installation.yml)
+
 > **AI-Powered Real-Time Cloud Threat Detection & Response Platform**  
 > *Detect. Predict. Respond. Explain. — Before the damage is done.*
 
