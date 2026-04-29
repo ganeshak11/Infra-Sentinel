@@ -178,41 +178,88 @@ Every alert, regardless of source (rule-based or ML), follows this structure:
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Docker + Docker Compose
-- A Linux host (for real log monitoring)
-- Gmail app password (for email alerts)
-- **(Optional)** API key for Gen-AI Copilot (Gemini, OpenAI, Anthropic, or Groq)
+### ⚡ One-Line Installation (Recommended)
 
-### 1. Clone the repo
+The fastest way to get started:
+
 ```bash
-git clone https://github.com/your-org/Cyber-Kavach.git
-cd Cyber-Kavach
+curl -fsSL https://raw.githubusercontent.com/ganeshak11/Infra-Sentinel/main/quick-install.sh | bash
 ```
 
-### 2. Configure environment
+This will automatically:
+- ✅ Check dependencies (Docker, Python, Git)
+- ✅ Clone the repository
+- ✅ Guide you through configuration (email, AI API keys)
+- ✅ Train the ML anomaly detection model
+- ✅ Build and launch all containers
+- ✅ Verify services are healthy
+
+**Installation time:** ~5-10 minutes
+
+---
+
+### 🔧 Manual Installation
+
+If you prefer more control:
+
 ```bash
-cp .env.example .env
-# Edit .env with your SMTP credentials and (optional) LLM API key
+# 1. Clone the repository
+git clone https://github.com/ganeshak11/Infra-Sentinel.git
+cd Infra-Sentinel
+
+# 2. Run the installer (handles everything)
+chmod +x install.sh
+./install.sh
 ```
 
-### 3. Train the ML model (first time only)
+The installer will:
+- Check system requirements
+- Verify port availability (3000, 8000)
+- Prompt for configuration (SMTP, AI keys)
+- Train ML model
+- Launch Docker containers
+
+---
+
+### 📋 Prerequisites
+
+- **Docker** 20.10+ & **Docker Compose** 1.29+
+- **Python 3.8+** with pip
+- **Git** & **curl**
+- **Linux** (Ubuntu/Debian/CentOS/RHEL) or **macOS**
+- **4GB RAM** minimum (8GB recommended)
+- **Ports 3000 & 8000** available
+
+**Quick dependency install:**
 ```bash
-cd agent/ml
-pip install -r requirements.txt
-python train_model.py
-cd ../..
+# Ubuntu/Debian
+sudo apt-get update && sudo apt-get install -y docker.io docker-compose python3 python3-pip git curl
+
+# CentOS/RHEL
+sudo yum install -y docker docker-compose python3 python3-pip git curl
+
+# macOS
+brew install docker docker-compose python3 git curl
 ```
 
-### 4. Launch
-```bash
-docker-compose up --build -d
-```
+---
 
-### 5. Open dashboard
+### 🎯 Access Your Dashboard
+
+Once installed, open:
+
 ```
 http://localhost:3000
 ```
+
+**API Documentation:** http://localhost:8000/docs  
+**Health Check:** http://localhost:8000/health
+
+---
+
+### 📚 Detailed Installation Guide
+
+For troubleshooting, configuration options, and advanced setup, see **[INSTALL.md](INSTALL.md)**
 
 ---
 
@@ -283,6 +330,73 @@ Cyber-Kavach/
 | Frontend | HTML, CSS (Glassmorphism), Vanilla JS | Real-time dashboard with AI Analysis modal |
 | Infrastructure | Docker, Docker Compose, Nginx | Containerized multi-service deployment |
 | Notifications | SMTP (Gmail) | Automated email alerts |
+
+---
+
+## 🔧 Management Scripts
+
+Cyber Kavach includes professional-grade management scripts:
+
+### 📦 Installation
+
+```bash
+# Quick install (one-liner)
+curl -fsSL https://raw.githubusercontent.com/ganeshak11/Infra-Sentinel/main/quick-install.sh | bash
+
+# Manual install (after cloning)
+./install.sh
+```
+
+### 🔄 Update
+
+Pull latest changes and rebuild:
+
+```bash
+./update.sh
+```
+
+This will:
+- Backup your `.env` configuration
+- Pull latest code from Git
+- Rebuild containers with new code
+- Optionally retrain ML model
+- Restart all services
+
+### 🗑️ Uninstall
+
+Clean removal of all components:
+
+```bash
+./uninstall.sh
+```
+
+This will:
+- Stop and remove all containers
+- Delete Docker images
+- Remove alert data and ML models
+- Optionally delete project directory
+
+### 📊 Useful Commands
+
+```bash
+# View live logs
+docker-compose logs -f
+
+# Check service status
+docker-compose ps
+
+# Restart a specific service
+docker-compose restart agent
+
+# Stop all services
+docker-compose down
+
+# Start services
+docker-compose up -d
+
+# Rebuild a specific service
+docker-compose build --no-cache backend
+```
 
 ---
 

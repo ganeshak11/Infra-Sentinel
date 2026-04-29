@@ -2,6 +2,31 @@
 
 This guide contains the exact commands used to trigger each module in the Cyber Kavach agent for live hackathon demonstration purposes.
 
+---
+
+## 🚀 Quick Installation
+
+### One-Liner Install (Recommended)
+```bash
+curl -fsSL https://raw.githubusercontent.com/ganeshak11/Infra-Sentinel/main/quick-install.sh | bash
+```
+
+### Manual Install
+```bash
+git clone https://github.com/ganeshak11/Infra-Sentinel.git
+cd Infra-Sentinel
+./install.sh
+```
+
+### Access Dashboard
+```
+http://localhost:3000
+```
+
+---
+
+## 📋 Demo Commands
+
 > **💡 Important IP Considerations:**
 > - Below, `10.212.16.127` represents the **Laptop's Wi-Fi IP** (Where Cyber Kavach is running).
 > - `10.212.16.72` represents the **Phone's Wi-Fi IP** (The attacker device).
