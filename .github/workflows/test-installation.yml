@@ -24,7 +24,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y docker.io docker-compose python3-pip
+          sudo apt-get install -y docker.io python3-pip
       
       - name: Verify script permissions
         run: |
@@ -52,28 +52,28 @@ jobs:
       
       - name: Build Docker containers
         run: |
-          docker-compose build
+          docker compose build
       
       - name: Start services
         run: |
-          docker-compose up -d
+          docker compose up -d
           sleep 30
       
       - name: Check service health
         run: |
-          docker-compose ps
+          docker compose ps
           curl -f http://localhost:8000/health || exit 1
           curl -f http://localhost:3000 || exit 1
       
       - name: Check logs for errors
         if: always()
         run: |
-          docker-compose logs
+          docker compose logs
       
       - name: Cleanup
         if: always()
         run: |
-          docker-compose down -v
+          docker compose down -v
           docker system prune -af
 
   test-documentation:
@@ -87,10 +87,7 @@ jobs:
       - name: Check documentation files exist
         run: |
           test -f README.md || exit 1
-          test -f INSTALL.md || exit 1
-          test -f QUICKREF.md || exit 1
-          test -f docs/INSTALLATION_FLOW.md || exit 1
-          test -f docs/INSTALLATION_SYSTEM.md || exit 1
+          test -f commands.md || exit 1
           test -f docs/PRD.md || exit 1
       
       - name: Check for broken links (basic)
